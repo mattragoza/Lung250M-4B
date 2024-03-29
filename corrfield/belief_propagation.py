@@ -1,6 +1,6 @@
 import torch
 
-from filters import *
+from . import filters
 
 def tbp(cost, edges, level, dist):
     marginals = cost
@@ -12,7 +12,7 @@ def tbp(cost, edges, level, dist):
         weight = dist[0, child, parent].view(-1, 1, 1, 1)
 
         data = marginals[:, child, :, :, :]
-        data_reg = minconv(data * weight) / weight
+        data_reg = filters.minconv(data * weight) / weight
 
         message[:, child, :, :, :] = data_reg
         marginals = torch.index_add(marginals, 1, parent, data_reg)
@@ -23,7 +23,7 @@ def tbp(cost, edges, level, dist):
         weight = dist[0, child, parent].view(-1, 1, 1, 1)
 
         data = marginals[:, parent, :, :, :] - message[:, child, :, :, :] + message[:, parent, :, :, :]
-        data_reg = minconv(data * weight) / weight
+        data_reg = filters.minconv(data * weight) / weight
 
         message[:, child, :, :, :] = data_reg
 

@@ -2,25 +2,30 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from filters import *
-from utils import *
+from . import filters
+from . import utils
+
 
 def mindssc(img, delta=1, sigma=1):
     device = img.device
     
     # define start and end locations for self-similarity pattern
-    six_neighbourhood = torch.tensor([[0, 1, 1],
-                                      [1, 1, 0],
-                                      [1, 0, 1],
-                                      [1, 1, 2],
-                                      [2, 1, 1],
-                                      [1, 2, 1]], dtype=torch.float, device=device)
+    six_neighbourhood = torch.tensor([
+        [0, 1, 1],
+        [1, 1, 0],
+        [1, 0, 1],
+        [1, 1, 2],
+        [2, 1, 1],
+        [1, 2, 1]
+    ], dtype=torch.float, device=device)
     
     # squared distances
-    dist = pdist(six_neighbourhood.unsqueeze(0)).squeeze(0)
+    dist = utils.pdist(six_neighbourhood.unsqueeze(0)).squeeze(0)
     
     # define comparison mask
-    x, y = torch.meshgrid(torch.arange(6, device=device), torch.arange(6, device=device))
+    x, y = torch.meshgrid(
+        torch.arange(6, device=device), torch.arange(6, device=device)
+    )
     mask = ((x > y).view(-1) & (dist == 2).view(-1))
     
     # build kernel
@@ -33,7 +38,7 @@ def mindssc(img, delta=1, sigma=1):
     rpad = nn.ReplicationPad3d(delta)
     
     # compute patch-ssd
-    ssd = smooth(((F.conv3d(rpad(img), mshift1, dilation=delta) - F.conv3d(rpad(img), mshift2, dilation=delta)) ** 2), sigma)
+    ssd = filters.smooth(((F.conv3d(rpad(img), mshift1, dilation=delta) - F.conv3d(rpad(img), mshift2, dilation=delta)) ** 2), sigma)
     
     # MIND equation
     mind = ssd - torch.min(ssd, 1, keepdim=True)[0]
