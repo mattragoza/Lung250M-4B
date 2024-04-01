@@ -32,13 +32,26 @@ def mindssc(img, delta=1, sigma=1):
     idx_shift1 = six_neighbourhood.unsqueeze(1).repeat(1,6,1).view(-1,3)[mask, :].long()
     idx_shift2 = six_neighbourhood.unsqueeze(0).repeat(6,1,1).view(-1,3)[mask, :].long()
     mshift1 = torch.zeros((12, 1, 3, 3, 3), device=device)
-    mshift1.view(-1)[torch.arange(12, device=device) * 27 + idx_shift1[:,0] * 9 + idx_shift1[:, 1] * 3 + idx_shift1[:, 2]] = 1
+    mshift1.view(-1)[
+        torch.arange(12, device=device) * 27 + 
+        idx_shift1[:,0] * 9 + 
+        idx_shift1[:, 1] * 3 + 
+        idx_shift1[:, 2]
+    ] = 1
     mshift2 = torch.zeros((12, 1, 3, 3, 3), device=device)
-    mshift2.view(-1)[torch.arange(12, device=device) * 27 + idx_shift2[:,0] * 9 + idx_shift2[:, 1] * 3 + idx_shift2[:, 2]] = 1
+    mshift2.view(-1)[
+        torch.arange(12, device=device) * 27 +
+        idx_shift2[:,0] * 9 +
+        idx_shift2[:, 1] * 3 +
+        idx_shift2[:, 2]
+    ] = 1
     rpad = nn.ReplicationPad3d(delta)
     
     # compute patch-ssd
-    ssd = filters.smooth(((F.conv3d(rpad(img), mshift1, dilation=delta) - F.conv3d(rpad(img), mshift2, dilation=delta)) ** 2), sigma)
+    ssd = filters.smooth(((
+        F.conv3d(rpad(img), mshift1, dilation=delta) -
+        F.conv3d(rpad(img), mshift2, dilation=delta)
+    ) ** 2), sigma)
     
     # MIND equation
     mind = ssd - torch.min(ssd, 1, keepdim=True)[0]

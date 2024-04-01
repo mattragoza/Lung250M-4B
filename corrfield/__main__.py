@@ -78,7 +78,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = 'corrField registration')
+    parser = argparse.ArgumentParser(description='corrField registration')
 
     parser.add_argument('-F',  '--fixed',         required='True', help="fixed image (*.nii/*.nii.gz)")
     parser.add_argument('-M',  '--moving',        required='True', help="moving image (*.nii/*.nii.gz)")

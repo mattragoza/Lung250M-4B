@@ -51,19 +51,24 @@ def kpts_dist(kpts, img, beta, k=64):
     B, N, _ = kpts.shape
     _, _, D, H, W = img.shape
     
-    dist = pdist(utils.kpts_world(kpts, (D, H, W), align_corners=True)).sqrt()
+    dist = utils.pdist(utils.kpts_world(kpts, (D, H, W), align_corners=True)).sqrt()
     dist[:, torch.arange(dist.shape[1]), torch.arange(dist.shape[2])] = 1e15
     dist[dist<0.1] = 0.1
     img_mean = filters.mean_filter(img, 2)
-    kpts_mean = F.grid_sample(img_mean, kpts.view(1, 1, 1, -1, 3).to(img_mean.dtype), mode='nearest', align_corners=True).view(1, -1, 1)
-    dist += pdist(kpts_mean, p=1)/beta
+    kpts_mean = F.grid_sample(
+        img_mean,
+        kpts.view(1, 1, 1, -1, 3).to(img_mean.dtype),
+        mode='nearest',
+        align_corners=True
+    ).view(1, -1, 1)
+    dist += utils.pdist(kpts_mean, p=1) / beta
     
     include_self = False
     ind = (-dist).topk(k + (1 - int(include_self)), dim=-1)[1][:, :, 1 - int(include_self):]
     A = torch.zeros((B, N, N), device=device)
     A[:, torch.arange(N).repeat(k), ind[0].t().contiguous().view(-1)] = 1
     A[:, ind[0].t().contiguous().view(-1), torch.arange(N).repeat(k)] = 1
-    dist = A*dist
+    dist = A * dist
     
     return dist
 

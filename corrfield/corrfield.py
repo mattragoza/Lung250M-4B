@@ -22,7 +22,10 @@ from . import (
 #    
 #    return marginals
 
-def compute_marginals(kpts_fix, img_fix, mind_fix, mind_mov, alpha, beta, disp_radius, disp_step, patch_radius):
+
+def compute_marginals(
+    kpts_fix, img_fix, mind_fix, mind_mov, alpha, beta, disp_radius, disp_step, patch_radius
+):
     cost = alpha * similarity.ssd(
         kpts_fix, mind_fix, mind_mov, disp_radius, disp_step, patch_radius
     )
@@ -30,21 +33,37 @@ def compute_marginals(kpts_fix, img_fix, mind_fix, mind_mov, alpha, beta, disp_r
     while True:
         k *= 2
         try:
-            dist = utils.kpts_dist(kpts_fix, img_fix, beta, k)
+            dist = graphs.kpts_dist(kpts_fix, img_fix, beta, k)
             edges, level = graphs.minimum_spanning_tree(dist)
             break
-        except:
+        except IndexError:
             pass
-    marginals = belief_propagation.tbp(cost, edges, level, dist)
 
+    marginals = belief_propagation.tbp(cost, edges, level, dist)
     return marginals
 
 
-def corrfield(img_fix, mask_fix, img_mov, alpha, beta, gamma, delta, lambd, sigma, sigma1, L, N, Q, R, T):
+def corrfield(
+    img_fix,
+    mask_fix,
+    img_mov,
+    alpha=2.5,   # regularization parameter
+    beta=150.0,  # intensity weighting factor
+    gamma=5.0,   # scaling factor for soft correspondences  
+    delta=1,     # step size for MIND descriptor
+    lambd=0.0,   # regularization parameter for TPS
+    sigma=1.4,   # sigma for Foerstner operator
+    sigma1=1.0,  # sigma for MIND descriptor
+    L=[16, 8],   # maximum search radius
+    N=[6, 3],    # cube-length for non-maximum suppression
+    Q=[2, 1],    # quantization of search step size
+    R=[3, 2],    # patch radius for similarity search
+    T=['n', 'n'] # rigid(r) / non-rigid(n)
+):
     device = img_fix.device
     _, _, D, H, W = img_fix.shape
     
-    print('Compute fixed MIND features ...', end =" ")
+    print('Compute fixed MIND features ...', end=" ")
     torch.cuda.synchronize()
     t0 = time.time()
     mind_fix = mindssc.mindssc(img_fix, delta, sigma1)
@@ -64,7 +83,7 @@ def corrfield(img_fix, mask_fix, img_mov, alpha, beta, gamma, delta, lambd, sigm
         
         disp = utils.get_disp(Q[i], L[i], (D, H, W), device=device)
         
-        print('    Compute moving MIND features ...', end =" ")
+        print('    Compute moving MIND features ...', end=" ")
         torch.cuda.synchronize()
         t0 = time.time()
         mind_mov = mindssc.mindssc(img_mov_warped, delta, sigma1)
@@ -87,7 +106,10 @@ def corrfield(img_fix, mask_fix, img_mov, alpha, beta, gamma, delta, lambd, sigm
         t1 = time.time()
         print('finished ({:.2f} s).'.format(t1-t0))
 
-        flow = (F.softmax(-gamma * marginalsf.view(1, kpts_fix.shape[1], -1, 1), dim=2) * disp.view(1, 1, -1, 3)).sum(2)
+        flow = (
+            F.softmax(-gamma * marginalsf.view(1, kpts_fix.shape[1], -1, 1), dim=2) *
+            disp.view(1, 1, -1, 3)
+        ).sum(2)
         
         kpts_mov = kpts_fix + flow
 
@@ -122,9 +144,19 @@ def corrfield(img_fix, mask_fix, img_mov, alpha, beta, gamma, delta, lambd, sigm
         
         print()
         
-    flow = F.grid_sample(dense_flow.permute(0, 4, 1, 2, 3), kpts_fix.view(1, 1, 1, -1, 3), align_corners=True).view(1, 3, -1).permute(0, 2, 1)
+    flow = F.grid_sample(
+        dense_flow.permute(0, 4, 1, 2, 3),
+        kpts_fix.view(1, 1, 1, -1, 3),
+        align_corners=True
+    ).view(1, 3, -1).permute(0, 2, 1)
     
     ##dense_flow1 = F.affine_grid(torch.eye(3, 4, dtype=img_mov.dtype, device=device).unsqueeze(0), (1, 1, D, H, W), align_corners=True) + dense_flow.to(img_mov.dtype)
 
-    return utils.flow_world(dense_flow.view(1, -1, 3), (D, H, W), align_corners=True).view(1, D, H, W, 3), kpts_world(kpts_fix, (D, H, W), align_corners=True), utils.kpts_world(kpts_fix + flow, (D, H, W), align_corners=True)
+    return (
+        utils.flow_world(
+            dense_flow.view(1, -1, 3), (D, H, W), align_corners=True
+        ).view(1, D, H, W, 3),
+        utils.kpts_world(kpts_fix, (D, H, W), align_corners=True),
+        utils.kpts_world(kpts_fix + flow, (D, H, W), align_corners=True)
+    )
     #return img_mov_warped, kpts_world(kpts_fix, (D, H, W), align_corners=True), kpts_world(kpts_fix + flow, (D, H, W), align_corners=True)

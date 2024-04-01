@@ -1,5 +1,6 @@
 from . import (
 	belief_propagation,
+	corrfield,
 	filters,
 	foerstner,
 	graphs,

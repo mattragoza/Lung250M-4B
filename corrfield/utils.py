@@ -57,7 +57,8 @@ def get_disp(disp_step, disp_radius, shape, device):
     disp = torch.stack(
         torch.meshgrid(
             torch.arange(
-                -disp_step * disp_radius, disp_step * disp_radius + 1,
+                -disp_step * disp_radius,
+                disp_step * disp_radius + 1,
                 disp_step,
                 device=device
             ),
