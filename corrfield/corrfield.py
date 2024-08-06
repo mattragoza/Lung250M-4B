@@ -24,7 +24,15 @@ from . import (
 
 
 def compute_marginals(
-    kpts_fix, img_fix, mind_fix, mind_mov, alpha, beta, disp_radius, disp_step, patch_radius
+    kpts_fix,
+    img_fix,
+    mind_fix,
+    mind_mov,
+    alpha,
+    beta,
+    disp_radius,
+    disp_step,
+    patch_radius
 ):
     cost = alpha * similarity.ssd(
         kpts_fix, mind_fix, mind_mov, disp_radius, disp_step, patch_radius
@@ -55,11 +63,35 @@ def corrfield(
     sigma=1.4,   # sigma for Foerstner operator
     sigma1=1.0,  # sigma for MIND descriptor
     L=[16, 8],   # maximum search radius
-    N=[6, 3],    # cube-length for non-maximum suppression
+    N=[6, 3],    # cube length for non-max suppression
     Q=[2, 1],    # quantization of search step size
     R=[3, 2],    # patch radius for similarity search
-    T=['n', 'n'] # rigid(r) / non-rigid(n)
+    T=['n', 'n'] # rigid(r) or non-rigid(n) transform
 ):
+    '''
+    Registration with CorrField.
+
+    Args:
+        img_fix: (1, 1, D, H, W) fixed image tensor
+        mask_fix: (1, 1, D, H, W) fixed mask tensor
+        img_mov: (1, 1, D, H, W) moving image tensor
+        alpha: regularization parameter (default: 2.5)
+        beta: intensity weighting factor (default: 150.0)
+        gamma: scaling factor for soft correspondences (default: 5.0)
+        delta: step size for MIND descriptor (default: 1)
+        lambd: TPS regularization parameter (default: 0.0)
+        sigma: sigma for Foerstner operator (default: 1.4)
+        sigma1: sigma for MIND descriptor (default: 1.0)
+        L: maximum search radius (default: [16, 8])
+        N: cube length for non-max suppression (default: [6, 3])
+        Q: quantization of search step size (default: [2, 1])
+        R: patch radius for similarity search (default: [3, 2])
+        T: rigid(r) or non-rigid(n) transform (default: ['n', 'n'])
+    Returns:
+        dense_flow: (1, D, H, W, 3) deformation tensor
+        kpts_fix: (1, N, 3) fixed image keypoints
+        kpts_fix_warped: (1, N, 3) warped keypoints
+    '''
     device = img_fix.device
     _, _, D, H, W = img_fix.shape
     
