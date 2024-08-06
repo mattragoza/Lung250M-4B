@@ -140,8 +140,16 @@ def corrfield(
         
         dense_flow += dense_flow_
         
-        img_mov_warped = F.grid_sample(img_mov, F.affine_grid(torch.eye(3, 4, dtype=img_mov.dtype, device=device).unsqueeze(0), (1, 1, D, H, W), align_corners=True) + dense_flow.to(img_mov.dtype), align_corners=True)
-        
+        img_mov_warped = F.grid_sample(
+            img_mov,
+            F.affine_grid(
+                torch.eye(3, 4, dtype=img_mov.dtype, device=device).unsqueeze(0),
+                (1, 1, D, H, W),
+                align_corners=True
+            ) + dense_flow.to(img_mov.dtype),
+            align_corners=True
+        )
+
         print()
         
     flow = F.grid_sample(

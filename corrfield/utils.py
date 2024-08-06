@@ -145,7 +145,7 @@ def compute_rigid_transform(kpts_fixed, kpts_moving, iter=5):
     ), dim=2)
     idx = torch.arange(kpts_fixed.shape[1]).to(kpts_fixed.device)[torch.randperm(kpts_fixed.shape[1])[:kpts_fixed.shape[1]//2]]
     for i in range(iter):
-        x = utils.find_rigid_3d(kpts_fixed[0, idx, :], kpts_moving[0, idx, :]).t()
+        x = find_rigid_3d(kpts_fixed[0, idx, :], kpts_moving[0, idx, :]).t()
         residual = torch.sqrt(torch.sum(torch.pow(kpts_moving[0] - torch.mm(kpts_fixed[0], x), 2), 1))
         _, idx = torch.topk(residual, kpts_fixed.shape[1]//2, largest=False)
     return x.t().unsqueeze(0)
